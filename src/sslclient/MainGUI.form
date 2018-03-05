@@ -105,7 +105,7 @@
                           <EmptySpace type="unrelated" max="-2" attributes="0"/>
                           <Group type="103" groupAlignment="0" attributes="0">
                               <Component id="serverTextField" min="-2" pref="126" max="-2" attributes="0"/>
-                              <Component id="portSpinner" min="-2" pref="72" max="-2" attributes="0"/>
+                              <Component id="portSpinner" min="-2" pref="82" max="-2" attributes="0"/>
                           </Group>
                       </Group>
                   </Group>
