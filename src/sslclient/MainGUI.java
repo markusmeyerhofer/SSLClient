@@ -5,6 +5,28 @@
  */
 package sslclient;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.UnknownHostException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
 /**
  *
  * @author max
@@ -41,10 +63,26 @@ public class MainGUI extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         quitButton.setText("Quit");
+        quitButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                quitButtonActionPerformed(evt);
+            }
+        });
 
         connectButton.setText("Connect");
+        connectButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                connectButtonActionPerformed(evt);
+            }
+        });
 
         disconnectButton.setText("Disconnect");
+        disconnectButton.setEnabled(false);
+        disconnectButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                disconnectButtonActionPerformed(evt);
+            }
+        });
 
         jLabel1.setText("Server:");
 
@@ -91,6 +129,7 @@ public class MainGUI extends javax.swing.JFrame {
         );
 
         shutdownButton.setText("Shut Down");
+        shutdownButton.setEnabled(false);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -130,12 +169,43 @@ public class MainGUI extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    private void quitButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_quitButtonActionPerformed
+        try {
+            disconnect();
+        } catch (IOException ex) {
+            Logger.getLogger(MainGUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        System.exit(0);
+    }//GEN-LAST:event_quitButtonActionPerformed
+
+    private void connectButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_connectButtonActionPerformed
+        try {
+            connect();
+        } catch (IOException ex) {
+            Logger.getLogger(MainGUI.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (NoSuchAlgorithmException ex) {
+            Logger.getLogger(MainGUI.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (KeyManagementException ex) {
+            Logger.getLogger(MainGUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_connectButtonActionPerformed
+
+    private void disconnectButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_disconnectButtonActionPerformed
+        try {
+            disconnect();
+        } catch (IOException ex) {
+            Logger.getLogger(MainGUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_disconnectButtonActionPerformed
+
     /**
      * @param args the command line arguments
      */
     public static void main(String args[]) {
         /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        
+        
+//<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
          * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
          */
@@ -164,7 +234,91 @@ public class MainGUI extends javax.swing.JFrame {
             }
         });
     }
+    
+    private void connect() throws IOException, NoSuchAlgorithmException, KeyManagementException {
+        String server = serverTextField.getText();
+        Integer port = (Integer) portSpinner.getValue();  
+        
+        try {                        
+            TrustManager[] trustAllCerts = new TrustManager[] {new X509TrustManager() {
+                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                        return null;
+                    }
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                    }
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                    }
+                }
+            };
 
+            // Install the all-trusting trust manager
+            SSLContext sc = SSLContext.getInstance("SSL");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());  
+
+            // Create all-trusting host name verifier
+            HostnameVerifier allHostsValid = (String hostname, SSLSession session) -> true;            
+            
+            SSLSocketFactory factory=sc.getSocketFactory();
+            sslsocket=(SSLSocket) factory.createSocket(server, port);
+            sslsocket.setNeedClientAuth(false);
+            sslsocket.startHandshake();
+
+        } 
+        catch(UnknownHostException e) {
+             System.out.println(e.getMessage());
+        }
+        catch(IOException e){
+            System.out.println(e.getMessage());
+        }
+        
+        connectButton.setEnabled(false);
+        disconnectButton.setEnabled(true);
+        shutdownButton.setEnabled(true);
+        
+        
+        out= new PrintWriter(new BufferedWriter(
+                             new OutputStreamWriter(
+                            sslsocket.getOutputStream())));
+
+        out.println("test");
+        out.println();
+        out.flush();
+
+        /*
+         * Make sure there were no surprises
+         */
+        if (out.checkError())
+            System.out.println("SSLSocketClient:  java.io.PrintWriter error");
+
+        /* read response */
+        in = new BufferedReader(new InputStreamReader(
+                                sslsocket.getInputStream()));
+
+        
+        /*
+        String inputLine;
+        while ((inputLine = in.readLine()) != null) {
+            System.out.println(inputLine);
+        } 
+*/
+
+    }
+        
+    private void disconnect() throws IOException {
+        
+        out.close();
+        in.close();
+        sslsocket.close();
+        connectButton.setEnabled(true);
+        disconnectButton.setEnabled(false);
+        shutdownButton.setEnabled(false);        
+    }
+
+    private SSLSocket sslsocket;
+    private PrintWriter out;
+    private BufferedReader in;
+    
+    
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton connectButton;
     private javax.swing.JButton disconnectButton;
